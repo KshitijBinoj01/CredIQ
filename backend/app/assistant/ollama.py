@@ -171,3 +171,26 @@ def chat_with_ollama(
     except (httpx.HTTPError, KeyError, IndexError, json.JSONDecodeError):
         return None
     return None
+
+
+def probe_ollama() -> dict:
+    base = os.getenv("OLLAMA_BASE_URL", OLLAMA_BASE_URL).rstrip("/")
+    tags_url = base.replace("/v1", "") + "/api/tags"
+    model = os.getenv("OLLAMA_MODEL", OLLAMA_MODEL)
+    try:
+        with httpx.Client(timeout=2.0) as client:
+            response = client.get(tags_url)
+            response.raise_for_status()
+            names = [
+                item.get("name", "")
+                for item in response.json().get("models", [])
+            ]
+            reachable = any(model in name for name in names) or len(names) > 0
+            return {
+                "api": True,
+                "ollama": reachable,
+                "model": model,
+                "installed": names[:8],
+            }
+    except (httpx.HTTPError, KeyError, json.JSONDecodeError):
+        return {"api": True, "ollama": False, "model": model, "installed": []}

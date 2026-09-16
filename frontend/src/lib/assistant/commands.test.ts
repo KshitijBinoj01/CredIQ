@@ -29,4 +29,10 @@ describe("assistant commands", () => {
     const result = runAssistantMessage("/reset", breakdown, average, "USD");
     expect(result.reset).toBe(true);
   });
+
+  it("answers /status without hanging", () => {
+    const breakdown = computeFactorScores(average);
+    const result = runAssistantMessage("/status", breakdown, average, "USD");
+    expect(result.reply).toContain("Ollama");
+  });
 });

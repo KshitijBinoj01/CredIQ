@@ -1,15 +1,18 @@
 import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { HelpCircle, X } from "lucide-react";
+import { Sparkles, X } from "lucide-react";
 import { Surface } from "@/components/ui/surface";
-import { chatAssistant } from "@/api/assistant";
+import { chatAssistant, fetchAssistantStatus } from "@/api/assistant";
 import {
   COMMAND_CHIPS,
+  formatCoachStatus,
   runAssistantMessage,
 } from "@/lib/assistant/commands";
 import { useCurrency } from "@/context/CurrencyContext";
+import type { AssistantChatResponse } from "@/types/assistant";
 import type { IntakeAnswers } from "@/types/intake";
 import type { ScoreBreakdown } from "@/types/score";
+import { cn } from "@/lib/utils";
 
 interface HelpAssistantDrawerProps {
   open: boolean;
@@ -21,6 +24,20 @@ interface HelpAssistantDrawerProps {
 interface ChatTurn {
   role: "user" | "assistant";
   text: string;
+  source?: AssistantChatResponse["source"];
+}
+
+function sourceLabel(source?: AssistantChatResponse["source"]) {
+  switch (source) {
+    case "ollama":
+      return "Coach (Ollama)";
+    case "command":
+      return "Command";
+    case "fallback":
+      return "Offline";
+    default:
+      return "Credit Coach";
+  }
 }
 
 export function HelpAssistantDrawer({
@@ -34,7 +51,7 @@ export function HelpAssistantDrawer({
   const [messages, setMessages] = useState<ChatTurn[]>([]);
   const [pending, setPending] = useState(false);
 
-  const starter = `Your current estimate is ${breakdown.score} (${breakdown.bandLabel}). Use /faq, /why, /improve, or ask in plain language.`;
+  const starter = `Your current estimate is ${breakdown.score} (${breakdown.bandLabel}). Use /faq, /why, /improve, /status, or ask in plain language.`;
 
   async function submit(text: string) {
     const trimmed = text.trim();
@@ -46,10 +63,35 @@ export function HelpAssistantDrawer({
       return;
     }
     setMessages((current) => [...current, { role: "user", text: trimmed }]);
+
+    const parsed = trimmed.toLowerCase().startsWith("/status");
+    if (parsed) {
+      setPending(true);
+      try {
+        const status = await fetchAssistantStatus();
+        setMessages((current) => [
+          ...current,
+          {
+            role: "assistant",
+            text: formatCoachStatus(status),
+            source: "command",
+          },
+        ]);
+      } catch {
+        setMessages((current) => [
+          ...current,
+          { role: "assistant", text: local.reply, source: "fallback" },
+        ]);
+      } finally {
+        setPending(false);
+      }
+      return;
+    }
+
     if (trimmed.startsWith("/")) {
       setMessages((current) => [
         ...current,
-        { role: "assistant", text: local.reply },
+        { role: "assistant", text: local.reply, source: "command" },
       ]);
       return;
     }
@@ -66,12 +108,16 @@ export function HelpAssistantDrawer({
       });
       setMessages((current) => [
         ...current,
-        { role: "assistant", text: remote.reply },
+        {
+          role: "assistant",
+          text: remote.reply,
+          source: remote.source,
+        },
       ]);
     } catch {
       setMessages((current) => [
         ...current,
-        { role: "assistant", text: local.reply },
+        { role: "assistant", text: local.reply, source: "fallback" },
       ]);
     } finally {
       setPending(false);
@@ -84,7 +130,7 @@ export function HelpAssistantDrawer({
         <>
           <motion.button
             type="button"
-            aria-label="Close help"
+            aria-label="Close Credit Coach"
             className="fixed inset-0 z-40 bg-black/55"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -101,10 +147,10 @@ export function HelpAssistantDrawer({
             <div className="flex items-start justify-between gap-4 px-6 pt-6">
               <div>
                 <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
-                  ( assistant )
+                  ( credit coach )
                 </p>
                 <h2 className="mt-2 text-2xl font-semibold tracking-tight">
-                  How this score works
+                  Credit Coach
                 </h2>
               </div>
               <button
@@ -147,9 +193,13 @@ export function HelpAssistantDrawer({
                     variant={item.role === "user" ? "elevated" : "inset"}
                   >
                     <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-                      {item.role === "user" ? "You" : "CreditIQ"}
+                      {item.role === "user" ? "You" : sourceLabel(item.source)}
                     </p>
-                    <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    <p
+                      className={cn(
+                        "mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground",
+                      )}
+                    >
                       {item.text}
                     </p>
                   </Surface>
@@ -170,7 +220,7 @@ export function HelpAssistantDrawer({
               }}
             >
               <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
-                Ask for help
+                Ask Credit Coach
               </label>
               <input
                 value={question}
@@ -199,8 +249,8 @@ export function HelpAssistantButton({ onClick }: { onClick: () => void }) {
       onClick={onClick}
       className="inline-flex items-center gap-2 font-mono text-xs uppercase tracking-[0.28em] text-muted-foreground transition-colors hover:text-foreground"
     >
-      <HelpCircle className="size-3.5" />
-      Help
+      <Sparkles className="size-3.5" />
+      Credit Coach
     </button>
   );
 }

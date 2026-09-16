@@ -13,7 +13,7 @@ import type {
 } from "@/types/api";
 import type { IntakeAnswers } from "@/types/intake";
 import type { ScoreBreakdown } from "@/types/score";
-import type { AssistantChatRequest, AssistantChatResponse } from "@/types/assistant";
+import type { AssistantChatRequest, AssistantChatResponse, AssistantStatus } from "@/types/assistant";
 import { runAssistantMessage } from "@/lib/assistant/commands";
 
 /** Set in .env to enable API calls (dev uses Vite proxy; prod uses this URL). */
@@ -131,5 +131,15 @@ export const apiClient = {
       setUsingMock(true);
       return false;
     }
+  },
+  async assistantStatus(): Promise<AssistantStatus> {
+    return withMockFallback(
+      () => request<AssistantStatus>("/api/assistant/status"),
+      () => ({
+        api: false,
+        ollama: false,
+        model: "llama3.2",
+      }),
+    );
   },
 };

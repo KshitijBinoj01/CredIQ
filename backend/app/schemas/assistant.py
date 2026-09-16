@@ -21,3 +21,9 @@ class AssistantChatResponse(BaseModel):
     reply: str
     source: Literal["command", "ollama", "fallback"] = "fallback"
     reset: bool = False
+
+
+class AssistantStatusResponse(BaseModel):
+    api: bool = True
+    ollama: bool = False
+    model: str = "llama3.2"

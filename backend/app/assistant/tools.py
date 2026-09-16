@@ -47,6 +47,7 @@ COMMAND_HELP = """Available commands:
 /intake — recap of your answers
 /lender — how portfolio ML differs
 /disclaimer — not a bureau score
+/status — API and Ollama health
 /reset — clear this chat"""
 
 
@@ -222,6 +223,20 @@ def run_command(
     if name == "disclaimer":
         return CommandResult(
             reply="CreditIQ is a hackathon demo. The borrower number is an educational FICO-style estimate, not a bureau score, not credit advice, and not a promise of approval."
+        )
+    if name == "status":
+        from app.assistant.ollama import probe_ollama
+
+        status = probe_ollama()
+        ollama = "reachable" if status.get("ollama") else "offline"
+        return CommandResult(
+            reply=(
+                "Credit Coach status\n"
+                "API: up\n"
+                f"Ollama: {ollama}\n"
+                f"Model: {status.get('model', 'llama3.2')}\n"
+                "Slash commands always work locally. Free-text uses Ollama when reachable."
+            )
         )
     return CommandResult(reply=f"Unknown command /{name}.\n{COMMAND_HELP}")
 

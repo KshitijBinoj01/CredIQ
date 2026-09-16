@@ -1,10 +1,24 @@
 from fastapi import APIRouter
 
-from app.assistant.ollama import chat_with_ollama
+from app.assistant.ollama import chat_with_ollama, probe_ollama
 from app.assistant.tools import handle_user_message
-from app.schemas.assistant import AssistantChatRequest, AssistantChatResponse
+from app.schemas.assistant import (
+    AssistantChatRequest,
+    AssistantChatResponse,
+    AssistantStatusResponse,
+)
 
 router = APIRouter(prefix="/api/assistant", tags=["assistant"])
+
+
+@router.get("/status", response_model=AssistantStatusResponse)
+def assistant_status() -> AssistantStatusResponse:
+    probed = probe_ollama()
+    return AssistantStatusResponse(
+        api=True,
+        ollama=bool(probed.get("ollama")),
+        model=str(probed.get("model") or "llama3.2"),
+    )
 
 
 @router.post("/chat", response_model=AssistantChatResponse)

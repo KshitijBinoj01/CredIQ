@@ -12,6 +12,12 @@ export interface AssistantChatRequest {
   currency: Currency;
 }
 
+export interface AssistantStatus {
+  api: boolean;
+  ollama: boolean;
+  model: string;
+}
+
 export interface AssistantChatResponse {
   reply: string;
   source: "command" | "ollama" | "fallback";

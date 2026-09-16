@@ -43,4 +43,11 @@ def test_assistant_route_is_registered() -> None:
 
     paths = set(app.openapi()["paths"])
     assert "/api/assistant/chat" in paths
+    assert "/api/assistant/status" in paths
     assert "/api/metrics" in paths
+
+
+def test_status_command() -> None:
+    result = handle_user_message("/status", _intake(), "USD")
+    assert "Ollama" in result.reply
+    assert "API" in result.reply

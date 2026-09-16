@@ -52,17 +52,88 @@ export const COMMAND_HELP = `Available commands:
 /intake — recap of your answers
 /lender — how portfolio ML differs
 /disclaimer — not a bureau score
+/status — API and Ollama health
 /reset — clear this chat`;
 
 export const COMMAND_CHIPS = [
   "/faq",
-  "/how",
-  "/factors",
   "/why",
   "/improve",
+  "/status",
   "/whatif payoff",
   "/help",
 ] as const;
+
+export interface ImproveIdea {
+  label: string;
+  delta: number;
+  why: string;
+}
+
+export function topImprovements(
+  intake: IntakeAnswers,
+  breakdown: ScoreBreakdown,
+): ImproveIdea[] {
+  const baseline = breakdown.score;
+  const ideas: ImproveIdea[] = [];
+
+  const consider = (label: string, patched: IntakeAnswers, why: string) => {
+    const delta = computeFactorScores(patched).score - baseline;
+    if (delta > 0) ideas.push({ label, delta, why });
+  };
+
+  consider(
+    "Pay your card balances down to zero",
+    applyWhatIf("payoff", intake),
+    "This lowers how much of your limit you are using — the second-biggest piece of your score.",
+  );
+  consider(
+    "Wait a year without opening new credit",
+    applyWhatIf("wait", intake),
+    "Older accounts and fewer recent applications both help the score.",
+  );
+  consider(
+    "Hold off on new credit applications this year",
+    {
+      ...intake,
+      creditApplicationsLastYear: 0,
+    },
+    "Each new application can nibble at the new-credit part of your score.",
+  );
+  if (intake.lastMissedPayment !== "never") {
+    consider(
+      "Catch up on missed payments and stay current",
+      {
+        ...intake,
+        lastMissedPayment: "never",
+      },
+      "Payment history is the largest piece of the score, so getting current helps the most.",
+    );
+  }
+  if (countAccountTypes(intake) < 3) {
+    consider(
+      "Add a loan you pay on time, like a car or student loan",
+      {
+        ...intake,
+        accountTypes: { ...intake.accountTypes, autoLoan: true },
+      },
+      "A mix of cards and installment loans can add a few extra points over time.",
+    );
+  }
+
+  ideas.sort((a, b) => b.delta - a.delta);
+  return ideas.slice(0, 3);
+}
+
+export function formatCoachStatus(status: {
+  api: boolean;
+  ollama: boolean;
+  model: string;
+}): string {
+  const api = status.api ? "up" : "down";
+  const ollama = status.ollama ? "reachable" : "offline";
+  return `Credit Coach status\nAPI: ${api}\nOllama: ${ollama}\nModel: ${status.model}\nSlash commands always work locally. Free-text uses Ollama when reachable.`;
+}
 
 export function parseAssistantCommand(
   raw: string,
@@ -108,46 +179,16 @@ function intakeRecap(intake: IntakeAnswers, currency: Currency): string {
 }
 
 function improve(intake: IntakeAnswers, breakdown: ScoreBreakdown): string {
-  const baseline = breakdown.score;
-  const ideas: Array<{ delta: number; text: string }> = [];
-
-  const consider = (label: string, patched: IntakeAnswers) => {
-    const delta = computeFactorScores(patched).score - baseline;
-    if (delta > 0) {
-      ideas.push({
-        delta,
-        text: `${label}: about +${delta} points (to ${baseline + delta}).`,
-      });
-    }
-  };
-
-  consider("Pay revolving balance to $0", applyWhatIf("payoff", intake));
-  consider("Wait 1 year (age + no new inquiries)", applyWhatIf("wait", intake));
-  consider("Pause new applications this year", {
-    ...intake,
-    creditApplicationsLastYear: 0,
-  });
-  if (intake.lastMissedPayment !== "never") {
-    consider("Bring payments current (no recent miss)", {
-      ...intake,
-      lastMissedPayment: "never",
-    });
-  }
-  if (countAccountTypes(intake) < 3) {
-    consider("Add a responsible installment account over time", {
-      ...intake,
-      accountTypes: { ...intake.accountTypes, autoLoan: true },
-    });
-  }
-
-  ideas.sort((a, b) => b.delta - a.delta);
-  const top = ideas.slice(0, 3);
+  const top = topImprovements(intake, breakdown);
   if (top.length === 0) {
-    return "This profile is already using most of its factor headroom. Keep on-time payments and utilization under 30%.";
+    return "Keep paying on time and stay under 30% of your limit. There is not much extra room on this profile right now.";
   }
   return [
-    "Highest-lift actions from your current answers (estimate only):",
-    ...top.map((item, index) => `${index + 1}. ${item.text}`),
+    "Highest-impact next steps from your answers:",
+    ...top.map(
+      (item, index) =>
+        `${index + 1}. ${item.label} — could raise your score by about ${item.delta} points (around ${breakdown.score + item.delta}). ${item.why}`,
+    ),
   ].join("\n");
 }
 
@@ -233,6 +274,14 @@ export function runAssistantCommand(
       return {
         reply:
           "CreditIQ is a hackathon demo. The borrower number is an educational FICO-style estimate, not a bureau score, not credit advice, and not a promise of approval.",
+      };
+    case "status":
+      return {
+        reply: formatCoachStatus({
+          api: Boolean(import.meta.env.VITE_API_URL),
+          ollama: false,
+          model: "llama3.2",
+        }),
       };
     default:
       return { reply: `Unknown command /${name}.\n${COMMAND_HELP}` };
