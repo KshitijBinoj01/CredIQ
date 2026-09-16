@@ -40,3 +40,26 @@ export interface FeatureMeta {
   step: number;
   unit?: string;
 }
+
+export interface ApplicantRecord extends BorrowerInput {
+  id: string;
+  name: string;
+}
+
+export interface ApplicantResult extends ApplicantRecord, PredictionResponse {}
+
+export interface PortfolioSummary {
+  totalApplicants: number;
+  avgScore: number;
+  avgProbability: number;
+  tierCounts: Record<RiskTier, number>;
+}
+
+export interface BatchPredictRequest {
+  applicants: ApplicantRecord[];
+}
+
+export interface BatchPredictResponse {
+  applicants: ApplicantResult[];
+  summary: PortfolioSummary;
+}

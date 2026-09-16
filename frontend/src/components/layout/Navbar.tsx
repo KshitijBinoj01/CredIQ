@@ -1,3 +1,4 @@
+import { CurrencyToggle } from "@/components/layout/CurrencyToggle";
 import { NavLink } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
@@ -16,24 +17,27 @@ export function Navbar() {
         >
           CreditIQ
         </NavLink>
-        <nav className="flex items-center gap-1 rounded-full border border-border bg-card/70 p-1">
-          {LINKS.map((link) => (
-            <NavLink
-              key={link.to}
-              to={link.to}
-              className={({ isActive }) =>
-                cn(
-                  "rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
-                  isActive
-                    ? "bg-white text-black"
-                    : "text-muted-foreground hover:text-foreground",
-                )
-              }
-            >
-              {link.label}
-            </NavLink>
-          ))}
-        </nav>
+        <div className="flex items-center gap-3">
+          <CurrencyToggle />
+          <nav className="flex items-center gap-1 rounded-full border border-border bg-card/70 p-1">
+            {LINKS.map((link) => (
+              <NavLink
+                key={link.to}
+                to={link.to}
+                className={({ isActive }) =>
+                  cn(
+                    "rounded-full px-4 py-1.5 text-xs font-semibold uppercase tracking-wide transition-colors",
+                    isActive
+                      ? "bg-white text-black"
+                      : "text-muted-foreground hover:text-foreground",
+                  )
+                }
+              >
+                {link.label}
+              </NavLink>
+            ))}
+          </nav>
+        </div>
       </div>
     </header>
   );

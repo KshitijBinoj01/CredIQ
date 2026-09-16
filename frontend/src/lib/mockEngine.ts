@@ -4,7 +4,10 @@ import {
   getTierInsight,
   probabilityToScore,
 } from "@/lib/riskScore";
+import { summarizePortfolio } from "@/lib/portfolioMetrics";
 import type {
+  ApplicantRecord,
+  BatchPredictResponse,
   BorrowerInput,
   ExplainResponse,
   PredictionResponse,
@@ -71,4 +74,21 @@ export function explain(profile: BorrowerInput): ExplainResponse {
   contributions.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
 
   return { factors: contributions };
+}
+
+export function batchPredict(
+  applicants: ApplicantRecord[],
+): BatchPredictResponse {
+  const scored = applicants.map((applicant) => {
+    const prediction = predict(applicant);
+    return {
+      ...applicant,
+      ...prediction,
+    };
+  });
+
+  return {
+    applicants: scored,
+    summary: summarizePortfolio(scored),
+  };
 }
