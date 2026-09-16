@@ -36,11 +36,11 @@ export const ACCOUNT_TYPE_ORDER: Array<keyof IntakeAnswers["accountTypes"]> = [
 ];
 
 const MISSED_RATIO: Record<MissedPaymentWindow, number> = {
-  never: 0.95,
-  "30": 0.78,
-  "60": 0.58,
-  "90": 0.38,
-  "120plus": 0.22,
+  never: 0.94,
+  "30": 0.72,
+  "60": 0.52,
+  "90": 0.36,
+  "120plus": 0.2,
 };
 
 function clamp(value: number, min: number, max: number) {
@@ -63,9 +63,9 @@ function interpolate(points: Array<[number, number]>, x: number) {
 function paymentRatio(intake: IntakeAnswers) {
   let ratio = MISSED_RATIO[intake.lastMissedPayment];
   if (intake.hasNegativeEvents) {
-    if (intake.negativeEventRecency === "0-12") ratio *= 0.55;
-    else if (intake.negativeEventRecency === "13-24") ratio *= 0.72;
-    else ratio *= 0.88;
+    if (intake.negativeEventRecency === "0-12") ratio *= 0.52;
+    else if (intake.negativeEventRecency === "13-24") ratio *= 0.74;
+    else ratio *= 0.86;
   }
   return clamp(ratio, 0, 1);
 }
@@ -77,28 +77,28 @@ function utilizationRatio(intake: IntakeAnswers) {
   return interpolate(
     [
       [0, 0.9],
-      [0.01, 0.95],
+      [0.01, 0.98],
       [0.09, 1],
-      [0.3, 0.59],
-      [0.5, 0.38],
-      [0.75, 0.18],
-      [1, 0.08],
-      [1.5, 0.04],
+      [0.3, 0.54],
+      [0.5, 0.34],
+      [0.75, 0.16],
+      [1, 0.07],
+      [1.5, 0.03],
     ],
     util,
   );
 }
 
 function creditAgeRatio(intake: IntakeAnswers) {
-  if (!intake.hasCreditSixMonths) return 0.18;
+  if (!intake.hasCreditSixMonths) return 0.16;
   return interpolate(
     [
-      [0, 0.22],
-      [0.5, 0.32],
+      [0, 0.2],
+      [0.5, 0.3],
       [1, 0.4],
-      [3, 0.58],
-      [6, 0.72],
-      [10, 0.85],
+      [3, 0.54],
+      [6, 0.7],
+      [10, 0.84],
       [15, 0.94],
       [25, 1],
     ],
@@ -115,8 +115,8 @@ function mixRatio(intake: IntakeAnswers) {
   return interpolate(
     [
       [0, 0.12],
-      [1, 0.45],
-      [2, 0.65],
+      [1, 0.44],
+      [2, 0.64],
       [3, 0.82],
       [4, 0.93],
       [5, 1],
@@ -130,12 +130,12 @@ function newCreditRatio(intake: IntakeAnswers) {
   return interpolate(
     [
       [0, 1],
-      [1, 0.88],
-      [2, 0.75],
-      [3, 0.6],
-      [4, 0.45],
-      [6, 0.28],
-      [10, 0.14],
+      [1, 0.86],
+      [2, 0.72],
+      [3, 0.56],
+      [4, 0.4],
+      [6, 0.24],
+      [10, 0.12],
     ],
     Math.max(0, intake.creditApplicationsLastYear),
   );
@@ -157,16 +157,22 @@ function summarize(key: FactorKey, intake: IntakeAnswers, percent: number) {
         limit > 0
           ? Math.round((intake.totalCreditBalance / limit) * 100)
           : 0;
-      return `Balance vs limit is ${util}%. Under 30% is the healthy zone.`;
+      const zone =
+        util <= 9
+          ? "1–9% is the strongest zone."
+          : util <= 30
+            ? "Under 30% is healthy; under 10% is strongest."
+            : "Over 30% cuts this factor quickly; 100% is near the floor.";
+      return `Balance vs limit is ${util}%. ${zone}`;
     }
     case "creditAge":
       return intake.hasCreditSixMonths
-        ? `First account opened about ${intake.yearsSinceFirstCredit} years ago.`
-        : "Thin file — less than 6 months of credit history.";
+        ? `First account opened about ${intake.yearsSinceFirstCredit} years ago. Age only moves with time.`
+        : "Thin file — less than 6 months of credit history, so this factor starts low.";
     case "creditMix":
-      return `${countAccountTypes(intake)} account type(s) on file.`;
+      return `${countAccountTypes(intake)} account type(s) on file. Revolving plus installment mixes score higher.`;
     case "newCredit":
-      return `${intake.creditApplicationsLastYear} credit application(s) in the last year.`;
+      return `${intake.creditApplicationsLastYear} credit application(s) in the last year. Each extra inquiry trims this bar.`;
   }
 }
 

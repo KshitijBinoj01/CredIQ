@@ -31,11 +31,11 @@ ACCOUNT_TYPE_ORDER = [
 ]
 
 MISSED_RATIO = {
-    "never": 0.95,
-    "30": 0.78,
-    "60": 0.58,
-    "90": 0.38,
-    "120plus": 0.22,
+    "never": 0.94,
+    "30": 0.72,
+    "60": 0.52,
+    "90": 0.36,
+    "120plus": 0.2,
 }
 
 
@@ -59,11 +59,11 @@ def _payment_ratio(intake: IntakeAnswers) -> float:
     ratio = MISSED_RATIO[intake.lastMissedPayment]
     if intake.hasNegativeEvents:
         if intake.negativeEventRecency == "0-12":
-            ratio *= 0.55
+            ratio *= 0.52
         elif intake.negativeEventRecency == "13-24":
-            ratio *= 0.72
+            ratio *= 0.74
         else:
-            ratio *= 0.88
+            ratio *= 0.86
     return _clamp(ratio, 0, 1)
 
 
@@ -75,13 +75,13 @@ def _utilization_ratio(intake: IntakeAnswers) -> float:
     return _interpolate(
         [
             (0, 0.9),
-            (0.01, 0.95),
+            (0.01, 0.98),
             (0.09, 1),
-            (0.3, 0.59),
-            (0.5, 0.38),
-            (0.75, 0.18),
-            (1, 0.08),
-            (1.5, 0.04),
+            (0.3, 0.54),
+            (0.5, 0.34),
+            (0.75, 0.16),
+            (1, 0.07),
+            (1.5, 0.03),
         ],
         util,
     )
@@ -89,15 +89,15 @@ def _utilization_ratio(intake: IntakeAnswers) -> float:
 
 def _credit_age_ratio(intake: IntakeAnswers) -> float:
     if not intake.hasCreditSixMonths:
-        return 0.18
+        return 0.16
     return _interpolate(
         [
-            (0, 0.22),
-            (0.5, 0.32),
+            (0, 0.2),
+            (0.5, 0.3),
             (1, 0.4),
-            (3, 0.58),
-            (6, 0.72),
-            (10, 0.85),
+            (3, 0.54),
+            (6, 0.7),
+            (10, 0.84),
             (15, 0.94),
             (25, 1),
         ],
@@ -112,14 +112,14 @@ def _count_types(intake: IntakeAnswers) -> int:
 
 def _mix_ratio(intake: IntakeAnswers) -> float:
     return _interpolate(
-        [(0, 0.12), (1, 0.45), (2, 0.65), (3, 0.82), (4, 0.93), (5, 1), (6, 1)],
+        [(0, 0.12), (1, 0.44), (2, 0.64), (3, 0.82), (4, 0.93), (5, 1), (6, 1)],
         _count_types(intake),
     )
 
 
 def _new_credit_ratio(intake: IntakeAnswers) -> float:
     return _interpolate(
-        [(0, 1), (1, 0.88), (2, 0.75), (3, 0.6), (4, 0.45), (6, 0.28), (10, 0.14)],
+        [(0, 1), (1, 0.86), (2, 0.72), (3, 0.56), (4, 0.4), (6, 0.24), (10, 0.12)],
         max(0, intake.creditApplicationsLastYear),
     )
 
@@ -146,14 +146,29 @@ def _summarize(key: str, intake: IntakeAnswers, percent: int) -> str:
     if key == "utilization":
         limit = intake.totalCreditLimit
         util = round((intake.totalCreditBalance / limit) * 100) if limit > 0 else 0
-        return f"Balance vs limit is {util}%. Under 30% is the healthy zone."
+        if util <= 9:
+            zone = "1–9% is the strongest zone."
+        elif util <= 30:
+            zone = "Under 30% is healthy; under 10% is strongest."
+        else:
+            zone = "Over 30% cuts this factor quickly; 100% is near the floor."
+        return f"Balance vs limit is {util}%. {zone}"
     if key == "creditAge":
         if intake.hasCreditSixMonths:
-            return f"First account opened about {intake.yearsSinceFirstCredit} years ago."
-        return "Thin file — less than 6 months of credit history."
+            return (
+                f"First account opened about {intake.yearsSinceFirstCredit} years ago. "
+                "Age only moves with time."
+            )
+        return "Thin file — less than 6 months of credit history, so this factor starts low."
     if key == "creditMix":
-        return f"{_count_types(intake)} account type(s) on file."
-    return f"{intake.creditApplicationsLastYear} credit application(s) in the last year."
+        return (
+            f"{_count_types(intake)} account type(s) on file. "
+            "Revolving plus installment mixes score higher."
+        )
+    return (
+        f"{intake.creditApplicationsLastYear} credit application(s) in the last year. "
+        "Each extra inquiry trims this bar."
+    )
 
 
 def _insight(factors: list[FactorScore], band_label: str) -> str:

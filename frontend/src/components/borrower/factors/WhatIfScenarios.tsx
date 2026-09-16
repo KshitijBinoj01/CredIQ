@@ -1,5 +1,6 @@
 import { CreditCard, Hourglass, Maximize2, UserPlus, UserX, X } from "lucide-react";
 import type { IntakeAnswers } from "@/types/intake";
+import { patchWhatIf, type WhatIfId } from "@/lib/whatIfPatches";
 
 interface WhatIfScenariosProps {
   intake: IntakeAnswers;
@@ -7,64 +8,16 @@ interface WhatIfScenariosProps {
 }
 
 const SCENARIOS: Array<{
-  id: string;
+  id: WhatIfId;
   label: string;
   icon: typeof CreditCard;
-  apply: (intake: IntakeAnswers) => Partial<IntakeAnswers>;
 }> = [
-  {
-    id: "payoff",
-    label: "Pay off credit card",
-    icon: CreditCard,
-    apply: () => ({ totalCreditBalance: 0 }),
-  },
-  {
-    id: "miss",
-    label: "Miss a payment",
-    icon: X,
-    apply: (intake) => ({
-      lastMissedPayment:
-        intake.lastMissedPayment === "never" ? "30" : "90",
-    }),
-  },
-  {
-    id: "open",
-    label: "Open new account",
-    icon: UserPlus,
-    apply: (intake) => ({
-      accountTypes: { ...intake.accountTypes, creditCard: true },
-      creditApplicationsLastYear: intake.creditApplicationsLastYear + 1,
-      totalCreditLimit: intake.totalCreditLimit + 3000,
-    }),
-  },
-  {
-    id: "close",
-    label: "Close old account",
-    icon: UserX,
-    apply: (intake) => ({
-      yearsSinceFirstCredit: Math.max(0, intake.yearsSinceFirstCredit - 2),
-      totalCreditLimit: Math.max(0, intake.totalCreditLimit * 0.7),
-    }),
-  },
-  {
-    id: "max",
-    label: "Max out card",
-    icon: Maximize2,
-    apply: (intake) => ({
-      totalCreditBalance: Math.max(intake.totalCreditLimit, 1000),
-      totalCreditLimit: Math.max(intake.totalCreditLimit, 1000),
-    }),
-  },
-  {
-    id: "wait",
-    label: "Wait 1 year",
-    icon: Hourglass,
-    apply: (intake) => ({
-      yearsSinceFirstCredit: intake.yearsSinceFirstCredit + 1,
-      hasCreditSixMonths: true,
-      creditApplicationsLastYear: 0,
-    }),
-  },
+  { id: "payoff", label: "Pay off credit card", icon: CreditCard },
+  { id: "miss", label: "Miss a payment", icon: X },
+  { id: "open", label: "Open new account", icon: UserPlus },
+  { id: "close", label: "Close old account", icon: UserX },
+  { id: "max", label: "Max out card", icon: Maximize2 },
+  { id: "wait", label: "Wait 1 year", icon: Hourglass },
 ];
 
 export function WhatIfScenarios({ intake, onPatch }: WhatIfScenariosProps) {
@@ -80,7 +33,7 @@ export function WhatIfScenarios({ intake, onPatch }: WhatIfScenariosProps) {
             <button
               key={scenario.id}
               type="button"
-              onClick={() => onPatch(scenario.apply(intake))}
+              onClick={() => onPatch(patchWhatIf(scenario.id, intake))}
               className="flex flex-col items-center gap-3 rounded-2xl bg-surface-raised px-3 py-5 text-center text-sm font-medium text-muted-foreground transition-colors hover:bg-white/[0.04] hover:text-foreground"
             >
               <Icon className="size-5 text-emerald-300" />
