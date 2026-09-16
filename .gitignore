@@ -16,3 +16,4 @@ backend/data
 backend/data/*.csv
 backend/data/cs-training.csv
 !backend/data/.gitkeep
+debug-*.log
