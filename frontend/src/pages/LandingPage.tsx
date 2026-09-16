@@ -1,22 +1,18 @@
-import { Link } from "react-router-dom";
 import { Cta69 } from "@/components/ui/cta69";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 
 export default function LandingPage() {
   return (
-    <main className="relative min-h-svh bg-background">
-      <Link
-        to="/pricing"
-        className="fixed top-6 right-6 z-50 rounded-full border border-white/10 bg-background/70 px-4 py-2 font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground backdrop-blur transition-transform hover:scale-[1.03] hover:text-foreground"
-      >
-        See plans
-      </Link>
+    <main className="relative flex min-h-svh flex-col bg-background">
+      <SiteHeader />
       <Cta69
-        className="flex min-h-svh items-center"
+        className="flex min-h-[calc(100svh-4rem)] flex-1 items-center"
         badge={{ label: "CreditIQ" }}
         heading="Know your credit risk before you apply."
         buttons={[
           { label: "Check your score", href: "/borrower?new=1", variant: "primary" },
-          { label: "Review portfolio", href: "/lender", variant: "inverse" },
+          { label: "Review portfolio", href: "/login", variant: "inverse" },
         ]}
         labels={{
           marqueePhrase: "Credit insight",
@@ -24,6 +20,7 @@ export default function LandingPage() {
           footnote: "Hackathon demo · No real credit data stored · Slash commands: /faq /why /improve",
         }}
       />
+      <SiteFooter />
     </main>
   );
 }

@@ -27,9 +27,10 @@ Open the URL Vite prints (often http://localhost:5173/ or http://localhost:5176/
 
 ### 30-second judge script
 
-1. Landing → **See plans** (top-right) → Free vs Pro table at [`/pricing`](frontend/src/pages/PricingPage.tsx).
+1. Landing header → **See plans** → Free vs Pro table at [`/pricing`](frontend/src/pages/PricingPage.tsx).
 2. **Check your score** → always opens a **fresh intake** wizard (even if you scored before).
 3. Complete intake → **Save under name** → refresh → **Open saved** → score + monthly chart return for that name.
+4. **Review portfolio** → demo login `lender@creditiq.demo` / `demo` → portfolio table.
 
 ### Public hosting (optional)
 
@@ -104,7 +105,7 @@ npm run dev
 1. Landing → **See plans** (top-right) or **Check your score** (fresh wizard).
 2. Toggle **INR ₹**. Enter income, limit, and balance. Submit **Calculate score**.
 3. Gauge + factor cards + plain-language **Recommended next step**. Try presets, **Pay off credit card**, scenario compare, **monthly progress** chart, **Download report**, **Save under name**, and **Credit Coach** (`/faq`, `/improve`, `/status`).
-4. Lender tab: Kaggle default-risk model. Open a row for threshold + grouped drivers. **Export CSV**.
+4. **Review portfolio** → demo login (`lender@creditiq.demo` / `demo`) → Kaggle default-risk model. Open a row for threshold + grouped drivers. **Export CSV**. **Sign out** returns to landing.
 
 ## Borrower score (FICO-style)
 

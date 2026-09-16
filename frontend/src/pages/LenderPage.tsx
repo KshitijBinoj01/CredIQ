@@ -3,8 +3,9 @@ import { ApplicantsTable } from "@/components/lender/ApplicantsTable";
 import { PortfolioSummary } from "@/components/lender/PortfolioSummary";
 import { RiskDistributionChart } from "@/components/lender/RiskDistributionChart";
 import { ApiDownBanner } from "@/components/layout/ApiDownBanner";
-import { Navbar } from "@/components/layout/Navbar";
 import { PageShell } from "@/components/layout/PageShell";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteHeader } from "@/components/layout/SiteHeader";
 import { useLenderPortfolio } from "@/hooks/useLenderPortfolio";
 import { useApiHealth } from "@/hooks/useApiHealth";
 import { downloadLenderCsv } from "@/lib/lenderCsv";
@@ -27,9 +28,9 @@ export default function LenderPage() {
   const { down } = useApiHealth();
 
   return (
-    <main className="min-h-svh bg-background text-foreground">
-      <Navbar />
-      <PageShell variant="wide">
+    <main className="flex min-h-svh flex-col bg-background text-foreground">
+      <SiteHeader showCurrency showSignOut />
+      <PageShell variant="wide" className="flex-1">
         <div className="mb-8">
           <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
             ( lender view )
@@ -96,6 +97,7 @@ export default function LenderPage() {
         groups={groups}
         onClose={closeDetail}
       />
+      <SiteFooter variant="compact" />
     </main>
   );
 }
