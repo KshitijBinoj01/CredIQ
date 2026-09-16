@@ -1,4 +1,4 @@
-from app.ml.model import load_model, load_scaler
+from app.ml.model import load_model, load_scaler, load_threshold
 from app.ml.preprocess import transform
 from app.ml.risk_score import get_risk_tier, get_tier_insight, probability_to_score
 from app.schemas.prediction import BorrowerInput, PredictionResponse
@@ -11,11 +11,26 @@ def predict(profile: BorrowerInput) -> PredictionResponse:
     probability = float(model.predict_proba(features)[0, 1])
     score = probability_to_score(probability)
     tier = get_risk_tier(score)
+    threshold = load_threshold()
+    flagged = probability >= threshold
+    insight = get_tier_insight(tier)
+    if flagged:
+        insight = (
+            f"{insight} Default probability {probability:.0%} is at or above the "
+            f"model flag threshold of {threshold:.0%}."
+        )
+    else:
+        insight = (
+            f"{insight} Default probability {probability:.0%} is below the "
+            f"flag threshold of {threshold:.0%}."
+        )
     return PredictionResponse(
         score=score,
         probability=probability,
         tier=tier,
-        insight=get_tier_insight(tier),
+        insight=insight,
+        threshold=threshold,
+        flagged=flagged,
     )
 
 

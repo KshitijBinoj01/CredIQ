@@ -29,6 +29,8 @@ class PredictionResponse(BaseModel):
     probability: float
     tier: RiskTier
     insight: str
+    threshold: float = 0.5
+    flagged: bool = False
 
 
 class WhatIfRequest(BaseModel):
@@ -42,8 +44,19 @@ class ShapFactor(BaseModel):
     impact: float
 
 
+ShapGroupKey = Literal["lates", "utilization", "income", "leverage"]
+
+
+class ShapGroup(BaseModel):
+    key: ShapGroupKey
+    label: str
+    impact: float
+    members: list[ShapFactor]
+
+
 class ExplainResponse(BaseModel):
     factors: list[ShapFactor]
+    groups: list[ShapGroup] = Field(default_factory=list)
 
 
 class FeatureMeta(BaseModel):
