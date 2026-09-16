@@ -2,7 +2,12 @@ import { useState } from "react";
 import { AnimatePresence, motion } from "framer-motion";
 import { HelpCircle, X } from "lucide-react";
 import { Surface } from "@/components/ui/surface";
-import { answerHelpQuestion, tipsForBreakdown } from "@/lib/tipEngine";
+import { chatAssistant } from "@/api/assistant";
+import {
+  COMMAND_CHIPS,
+  runAssistantMessage,
+} from "@/lib/assistant/commands";
+import { useCurrency } from "@/context/CurrencyContext";
 import type { IntakeAnswers } from "@/types/intake";
 import type { ScoreBreakdown } from "@/types/score";
 
@@ -13,15 +18,65 @@ interface HelpAssistantDrawerProps {
   intake: IntakeAnswers;
 }
 
+interface ChatTurn {
+  role: "user" | "assistant";
+  text: string;
+}
+
 export function HelpAssistantDrawer({
   open,
   onClose,
   breakdown,
   intake,
 }: HelpAssistantDrawerProps) {
+  const { currency } = useCurrency();
   const [question, setQuestion] = useState("");
-  const [answer, setAnswer] = useState<string | null>(null);
-  const tips = tipsForBreakdown(breakdown);
+  const [messages, setMessages] = useState<ChatTurn[]>([]);
+  const [pending, setPending] = useState(false);
+
+  const starter = `Your current estimate is ${breakdown.score} (${breakdown.bandLabel}). Use /faq, /why, /improve, or ask in plain language.`;
+
+  async function submit(text: string) {
+    const trimmed = text.trim();
+    if (!trimmed || pending) return;
+    setQuestion("");
+    const local = runAssistantMessage(trimmed, breakdown, intake, currency);
+    if (local.reset) {
+      setMessages([]);
+      return;
+    }
+    setMessages((current) => [...current, { role: "user", text: trimmed }]);
+    if (trimmed.startsWith("/")) {
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", text: local.reply },
+      ]);
+      return;
+    }
+    setPending(true);
+    try {
+      const history = [
+        ...messages.map((item) => ({ role: item.role, content: item.text })),
+        { role: "user" as const, content: trimmed },
+      ];
+      const remote = await chatAssistant({
+        messages: history,
+        intake,
+        currency,
+      });
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", text: remote.reply },
+      ]);
+    } catch {
+      setMessages((current) => [
+        ...current,
+        { role: "assistant", text: local.reply },
+      ]);
+    } finally {
+      setPending(false);
+    }
+  }
 
   return (
     <AnimatePresence>
@@ -37,13 +92,13 @@ export function HelpAssistantDrawer({
             onClick={onClose}
           />
           <motion.aside
-            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col overflow-y-auto bg-background px-6 py-6 shadow-2xl"
+            className="fixed inset-y-0 right-0 z-50 flex w-full max-w-md flex-col bg-background shadow-2xl"
             initial={{ x: "100%" }}
             animate={{ x: 0 }}
             exit={{ x: "100%" }}
             transition={{ duration: 0.35, ease: [0.22, 1, 0.36, 1] }}
           >
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 px-6 pt-6">
               <div>
                 <p className="font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
                   ( assistant )
@@ -62,16 +117,56 @@ export function HelpAssistantDrawer({
               </button>
             </div>
 
-            <p className="mt-4 text-sm text-muted-foreground">
-              Your current estimate is {breakdown.score} ({breakdown.bandLabel}).
-              Ask a question or read the factor guide below.
-            </p>
+            <p className="mt-4 px-6 text-sm text-muted-foreground">{starter}</p>
+
+            <div className="mt-4 flex flex-wrap gap-2 px-6">
+              {COMMAND_CHIPS.map((chip) => (
+                <button
+                  key={chip}
+                  type="button"
+                  onClick={() => void submit(chip)}
+                  className="rounded-full bg-surface-raised px-3 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground hover:text-foreground"
+                >
+                  {chip}
+                </button>
+              ))}
+            </div>
+
+            <div className="mt-4 min-h-0 flex-1 space-y-3 overflow-y-auto px-6 pb-4">
+              {messages.length === 0 ? (
+                <Surface className="rounded-2xl px-4 py-4" variant="inset">
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                    {runAssistantMessage("/faq", breakdown, intake, currency).reply}
+                  </p>
+                </Surface>
+              ) : (
+                messages.map((item, index) => (
+                  <Surface
+                    key={`${item.role}-${index}`}
+                    className="rounded-2xl px-4 py-4"
+                    variant={item.role === "user" ? "elevated" : "inset"}
+                  >
+                    <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                      {item.role === "user" ? "You" : "CreditIQ"}
+                    </p>
+                    <p className="mt-2 text-sm leading-relaxed whitespace-pre-wrap text-muted-foreground">
+                      {item.text}
+                    </p>
+                  </Surface>
+                ))
+              )}
+              {pending ? (
+                <p className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
+                  Thinking…
+                </p>
+              ) : null}
+            </div>
 
             <form
-              className="mt-6"
+              className="border-t border-white/5 px-6 py-4"
               onSubmit={(event) => {
                 event.preventDefault();
-                setAnswer(answerHelpQuestion(question, breakdown, intake));
+                void submit(question);
               }}
             >
               <label className="font-mono text-[11px] uppercase tracking-[0.22em] text-muted-foreground">
@@ -80,7 +175,7 @@ export function HelpAssistantDrawer({
               <input
                 value={question}
                 onChange={(event) => setQuestion(event.target.value)}
-                placeholder="Why is my score low? How does INR work?"
+                placeholder="/faq  or  Why is my score low?"
                 className="mt-2 w-full rounded-xl bg-surface-inset px-4 py-3 text-sm outline-none ring-1 ring-white/5 focus:ring-primary/50"
               />
               <button
@@ -90,25 +185,6 @@ export function HelpAssistantDrawer({
                 Ask
               </button>
             </form>
-
-            {answer ? (
-              <Surface className="mt-4 rounded-2xl px-4 py-4" variant="inset">
-                <p className="text-sm leading-relaxed text-muted-foreground">
-                  {answer}
-                </p>
-              </Surface>
-            ) : null}
-
-            <div className="mt-8 space-y-4">
-              {tips.map((tip) => (
-                <Surface key={tip.title} className="rounded-2xl px-4 py-4" variant="inset">
-                  <p className="text-sm font-semibold">{tip.title}</p>
-                  <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                    {tip.body}
-                  </p>
-                </Surface>
-              ))}
-            </div>
           </motion.aside>
         </>
       ) : null}
