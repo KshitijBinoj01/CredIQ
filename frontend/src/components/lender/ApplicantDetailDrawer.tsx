@@ -6,20 +6,30 @@ import { Surface } from "@/components/ui/surface";
 import { formatFeatureValue } from "@/lib/featureLabels";
 import { cn } from "@/lib/utils";
 import { useCurrency } from "@/context/CurrencyContext";
-import type { ApplicantResult, ShapFactor } from "@/types/api";
+import type { ApplicantResult, ShapFactor, ShapGroup } from "@/types/api";
 
 interface ApplicantDetailDrawerProps {
   applicant: ApplicantResult | null;
   factors: ShapFactor[];
+  groups: ShapGroup[];
   onClose: () => void;
 }
 
 export function ApplicantDetailDrawer({
   applicant,
   factors,
+  groups,
   onClose,
 }: ApplicantDetailDrawerProps) {
   const { currency } = useCurrency();
+  const rows = groups.length > 0 ? groups : factors.map((factor) => ({
+    key: factor.feature,
+    label: factor.label,
+    impact: factor.impact,
+  }));
+  const threshold = applicant?.threshold ?? 0.5;
+  const flagged = applicant?.flagged ?? false;
+
   return (
     <AnimatePresence>
       {applicant ? (
@@ -75,17 +85,32 @@ export function ApplicantDetailDrawer({
 
             <Surface className="mt-8 rounded-2xl px-5 py-4" variant="inset">
               <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
-                Top factors
+                Default flag
+              </p>
+              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                Model threshold is {(threshold * 100).toFixed(0)}% default
+                probability. This applicant is{" "}
+                <span className={flagged ? "text-red-300" : "text-emerald-300"}>
+                  {flagged ? "flagged" : "below the cut"}
+                </span>{" "}
+                at {(applicant.probability * 100).toFixed(1)}%. These drivers
+                are Kaggle default-risk groups, not FICO factors.
+              </p>
+            </Surface>
+
+            <Surface className="mt-4 rounded-2xl px-5 py-4" variant="inset">
+              <p className="font-mono text-[11px] uppercase tracking-[0.28em] text-muted-foreground">
+                Risk drivers
               </p>
               <ul className="mt-3 space-y-3">
-                {factors.map((factor) => {
-                  const helping = factor.impact >= 0;
+                {rows.map((row) => {
+                  const helping = row.impact >= 0;
                   return (
                     <li
-                      key={factor.feature}
+                      key={row.key}
                       className="flex items-baseline justify-between gap-3"
                     >
-                      <span className="text-sm">{factor.label}</span>
+                      <span className="text-sm">{row.label}</span>
                       <span
                         className={cn(
                           "font-semibold tabular-nums",
@@ -93,7 +118,7 @@ export function ApplicantDetailDrawer({
                         )}
                       >
                         {helping ? "+" : ""}
-                        {factor.impact.toFixed(1)}
+                        {row.impact.toFixed(1)}
                       </span>
                     </li>
                   );

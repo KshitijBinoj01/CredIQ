@@ -7,6 +7,7 @@ import type {
   PortfolioSummary,
   RiskTier,
   ShapFactor,
+  ShapGroup,
 } from "@/types/api";
 
 export type ApplicantSortKey = "name" | "score" | "tier";
@@ -23,6 +24,7 @@ export function useLenderPortfolio() {
   const [summary, setSummary] = useState<PortfolioSummary | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [factors, setFactors] = useState<ShapFactor[]>([]);
+  const [groups, setGroups] = useState<ShapGroup[]>([]);
   const [sortKey, setSortKey] = useState<ApplicantSortKey>("score");
   const [sortDirection, setSortDirection] = useState<SortDirection>("asc");
   const [loading, setLoading] = useState(true);
@@ -80,12 +82,16 @@ export function useLenderPortfolio() {
   useEffect(() => {
     if (!selected) {
       setFactors([]);
+      setGroups([]);
       return;
     }
 
     let cancelled = false;
     explain(selected).then((result) => {
-      if (!cancelled) setFactors(result.factors.slice(0, 3));
+      if (!cancelled) {
+        setFactors(result.factors.slice(0, 3));
+        setGroups(result.groups ?? []);
+      }
     });
 
     return () => {
@@ -119,6 +125,7 @@ export function useLenderPortfolio() {
     summary,
     selected,
     factors,
+    groups,
     sortKey,
     sortDirection,
     loading,

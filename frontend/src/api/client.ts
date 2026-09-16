@@ -13,12 +13,22 @@ import type {
 } from "@/types/api";
 import type { IntakeAnswers } from "@/types/intake";
 import type { ScoreBreakdown } from "@/types/score";
+import type { AssistantChatRequest, AssistantChatResponse } from "@/types/assistant";
+import { runAssistantMessage } from "@/lib/assistant/commands";
 
-const API_URL = import.meta.env.VITE_API_URL as string | undefined;
-const USE_REMOTE = API_URL !== undefined;
+/** Set in .env to enable API calls (dev uses Vite proxy; prod uses this URL). */
+export const API_URL = import.meta.env.VITE_API_URL as string | undefined;
+export const USE_REMOTE = API_URL !== undefined;
+
+/** Same-origin in dev (Vite proxy) to avoid CORS when the dev port is not 5173. */
+function apiBase(): string {
+  if (!USE_REMOTE) return "";
+  if (import.meta.env.DEV) return "";
+  return API_URL ?? "";
+}
 
 async function request<T>(path: string, body?: unknown): Promise<T> {
-  const response = await fetch(`${API_URL ?? ""}${path}`, {
+  const response = await fetch(`${apiBase()}${path}`, {
     method: body === undefined ? "GET" : "POST",
     headers: { "Content-Type": "application/json" },
     body: body === undefined ? undefined : JSON.stringify(body),
@@ -88,5 +98,38 @@ export const apiClient = {
       () => request<ScoreBreakdown>("/api/score/calculate", intake),
       () => computeFactorScores(intake),
     );
+  },
+  async assistantChat(
+    payload: AssistantChatRequest,
+  ): Promise<AssistantChatResponse> {
+    return withMockFallback(
+      () => request<AssistantChatResponse>("/api/assistant/chat", payload),
+      () => {
+        const latest = payload.messages.at(-1)?.content ?? "";
+        const local = runAssistantMessage(
+          latest,
+          computeFactorScores(payload.intake),
+          payload.intake,
+          payload.currency,
+        );
+        return {
+          reply: local.reply,
+          source: "fallback" as const,
+          reset: local.reset,
+        };
+      },
+    );
+  },
+  async health(): Promise<boolean> {
+    if (!USE_REMOTE) return false;
+    try {
+      const response = await fetch(`${apiBase()}/health`);
+      const ok = response.ok;
+      setUsingMock(!ok);
+      return ok;
+    } catch {
+      setUsingMock(true);
+      return false;
+    }
   },
 };

@@ -1,4 +1,5 @@
 import { FEATURE_LABELS } from "@/lib/featureLabels";
+import { groupShapFactors } from "@/lib/shapGroups";
 import {
   getRiskTier,
   getTierInsight,
@@ -47,11 +48,15 @@ export function predict(profile: BorrowerInput): PredictionResponse {
   const probability = logitToProbability(riskLogit(profile));
   const score = probabilityToScore(probability);
   const tier = getRiskTier(score);
+  const threshold = 0.5;
+  const flagged = probability >= threshold;
   return {
     score,
     probability,
     tier,
-    insight: getTierInsight(tier),
+    insight: `${getTierInsight(tier)} Default probability ${(probability * 100).toFixed(0)}% is ${flagged ? "at or above" : "below"} the flag threshold of 50%.`,
+    threshold,
+    flagged,
   };
 }
 
@@ -73,7 +78,7 @@ export function explain(profile: BorrowerInput): ExplainResponse {
 
   contributions.sort((a, b) => Math.abs(b.impact) - Math.abs(a.impact));
 
-  return { factors: contributions };
+  return { factors: contributions, groups: groupShapFactors(contributions) };
 }
 
 export function batchPredict(

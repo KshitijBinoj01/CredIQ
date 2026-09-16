@@ -2,9 +2,11 @@ import { ApplicantDetailDrawer } from "@/components/lender/ApplicantDetailDrawer
 import { ApplicantsTable } from "@/components/lender/ApplicantsTable";
 import { PortfolioSummary } from "@/components/lender/PortfolioSummary";
 import { RiskDistributionChart } from "@/components/lender/RiskDistributionChart";
+import { ApiDownBanner } from "@/components/layout/ApiDownBanner";
 import { Navbar } from "@/components/layout/Navbar";
 import { PageShell } from "@/components/layout/PageShell";
 import { useLenderPortfolio } from "@/hooks/useLenderPortfolio";
+import { useApiHealth } from "@/hooks/useApiHealth";
 
 export default function LenderPage() {
   const {
@@ -12,6 +14,7 @@ export default function LenderPage() {
     summary,
     selected,
     factors,
+    groups,
     sortKey,
     sortDirection,
     loading,
@@ -20,6 +23,7 @@ export default function LenderPage() {
     selectApplicant,
     closeDetail,
   } = useLenderPortfolio();
+  const { down } = useApiHealth();
 
   return (
     <main className="min-h-svh bg-background text-foreground">
@@ -39,6 +43,7 @@ export default function LenderPage() {
           </p>
         </div>
 
+        {down ? <ApiDownBanner /> : null}
         {error ? (
           <p className="mb-6 rounded-2xl bg-primary/15 px-4 py-3 text-sm text-red-200">
             {error}
@@ -78,6 +83,7 @@ export default function LenderPage() {
       <ApplicantDetailDrawer
         applicant={selected}
         factors={factors}
+        groups={groups}
         onClose={closeDetail}
       />
     </main>

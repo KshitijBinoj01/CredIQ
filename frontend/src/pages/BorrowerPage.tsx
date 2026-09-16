@@ -14,9 +14,11 @@ import {
 import { ScoreGauge } from "@/components/borrower/ScoreGauge";
 import { Navbar } from "@/components/layout/Navbar";
 import { PageShell } from "@/components/layout/PageShell";
+import { ApiDownBanner } from "@/components/layout/ApiDownBanner";
 import { useCurrency } from "@/context/CurrencyContext";
 import { useBorrowerProfile } from "@/hooks/useBorrowerProfile";
 import { useFactorScore } from "@/hooks/useFactorScore";
+import { useApiHealth } from "@/hooks/useApiHealth";
 import { breakdownToRiskTier } from "@/lib/factorEngine";
 import { formatFeatureValue } from "@/lib/featureLabels";
 
@@ -31,6 +33,7 @@ export default function BorrowerPage() {
   } = useBorrowerProfile();
   const breakdown = useFactorScore(intake);
   const { currency } = useCurrency();
+  const { down } = useApiHealth();
   const [helpOpen, setHelpOpen] = useState(false);
   const tier = breakdownToRiskTier(breakdown.score);
 
@@ -42,6 +45,7 @@ export default function BorrowerPage() {
           <BorrowerIntakeWizard initial={intake} onSubmit={commitIntake} />
         ) : (
           <div className="space-y-10">
+            {down ? <ApiDownBanner className="mb-0 rounded-2xl bg-amber-500/10 px-4 py-3 text-sm text-amber-200" /> : null}
             <div className="flex flex-wrap items-center justify-between gap-3">
               <button
                 type="button"

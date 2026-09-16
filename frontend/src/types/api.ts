@@ -15,6 +15,8 @@ export interface PredictionResponse {
   probability: number;
   tier: RiskTier;
   insight: string;
+  threshold?: number;
+  flagged?: boolean;
 }
 
 export interface WhatIfRequest {
@@ -28,8 +30,16 @@ export interface ShapFactor {
   impact: number;
 }
 
+export interface ShapGroup {
+  key: "lates" | "utilization" | "income" | "leverage";
+  label: string;
+  impact: number;
+  members: ShapFactor[];
+}
+
 export interface ExplainResponse {
   factors: ShapFactor[];
+  groups?: ShapGroup[];
 }
 
 export interface FeatureMeta {

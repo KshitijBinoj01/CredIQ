@@ -13,8 +13,8 @@ export default function LandingPage() {
         ]}
         labels={{
           marqueePhrase: "Credit insight",
-          note: "Live what-if simulator, explainable factors, and a clear risk score — built for borrowers and lenders.",
-          footnote: "Hackathon demo · No real credit data stored",
+          note: "Borrower score is a FICO-style estimate from your answers. Lender view is a separate default-risk model — not the same number.",
+          footnote: "Hackathon demo · No real credit data stored · Slash commands: /faq /why /improve",
         }}
       />
     </main>
