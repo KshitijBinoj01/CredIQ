@@ -7,6 +7,7 @@ import { Navbar } from "@/components/layout/Navbar";
 import { PageShell } from "@/components/layout/PageShell";
 import { useLenderPortfolio } from "@/hooks/useLenderPortfolio";
 import { useApiHealth } from "@/hooks/useApiHealth";
+import { downloadLenderCsv } from "@/lib/lenderCsv";
 
 export default function LenderPage() {
   const {
@@ -41,6 +42,15 @@ export default function LenderPage() {
             Open a row for score, tier, and top factors. Borrower view uses
             a separate FICO-style factor score from the intake form.
           </p>
+          {!loading && applicants.length > 0 ? (
+            <button
+              type="button"
+              onClick={() => downloadLenderCsv(applicants)}
+              className="mt-4 font-mono text-xs uppercase tracking-[0.28em] text-muted-foreground transition-colors hover:text-foreground"
+            >
+              Export CSV
+            </button>
+          ) : null}
         </div>
 
         {down ? <ApiDownBanner /> : null}
